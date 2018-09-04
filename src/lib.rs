@@ -50,6 +50,28 @@ impl<T> VolatileCell<T> {
     {
         unsafe { ptr::write_volatile(self.value.get(), value) }
     }
+
+    /// Sets a sub-field of the contained value with the bit-manipulation-engine, if enabled.
+    /// See [NXP documentation] on the BME. This is a "BFI" operation.
+    ///
+    /// [NXP documentation]: https://www.nxp.com/docs/en/application-note/AN4838.pdf
+    #[inline(always)]
+    #[cfg(feature = "bit-manipulation")]
+    pub fn set_field(&self, first_bit: u8, bit_count: u8, value: T)
+        where T: Copy
+    {
+        unsafe {
+            let addr = self.value.get() as usize as u32;
+            if addr & 0xe007ffff != addr {
+                panic!("Tried to use BME on address 0x{:x?}, which is not in either the peripheral or upper-SRAM address range");
+            }
+            let bfi_addr = addr | 0x10000000 |
+                (((first_bit & 0x1f) as u32) << 23) |
+                ((((bit_count-1) & 0xf) as u32) << 19);
+            let bfi_ptr = bfi_addr as usize as *mut T;
+            ptr::write_volatile(bfi_ptr, value)
+        }
+    }
 }
 
 // NOTE implicit because of `UnsafeCell`
