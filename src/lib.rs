@@ -115,6 +115,44 @@ impl<T> VolatileCell<T> {
             ptr::write_volatile(bfi_ptr, !bits_to_clear)
         }
     }
+
+    /// See [ARM documentation] and [ST documentation] on bit-banding.
+    ///
+    /// [ARM documentation]: http://infocenter.arm.com/help/index.jsp?topic=/com.arm.doc.ddi0337h/Behcjiic.html
+    /// [ST documentation]: https://www.st.com/content/ccc/resource/technical/document/programming_manual/5b/ca/8d/83/56/7f/40/08/CD00228163.pdf/files/CD00228163.pdf/jcr:content/translations/en.CD00228163.pdf
+    #[inline(always)]
+    #[cfg(feature = "bit-banding")]
+    fn bitband_pointer(addr: *mut T, bit_to_modify: u8) -> *mut u32 {
+        let addr = addr as usize as u32;
+        if addr < 0x20000000 || (addr > 0x200fffff && addr < 0x40000000) || addr > 0x400fffff {
+            panic!("Tried to use bit-banding on address 0x{:x?}, which is outside the bit-banded region");
+        }
+        if usize::from(bit_to_modify) > core::mem::size_of::<T>()*8 {
+            panic!("Tried to change bit {} of value whose size is {}", bit_to_modify, core::mem::size_of::<T>());
+        }
+        // Shift left 5 bits, since each "normal" bit expands to a 32-bit word in the alias region
+        let bb_offset = (addr & 0xfffff) << 5 | u32::from(bit_to_modify & 0x1f);
+        (((addr & 0xf0000000) | 0x02000000) | bb_offset) as usize as *mut u32
+    }
+
+    /// Sets a single bit of the contained value with bit-banding, if enabled.
+    /// See [ARM documentation] and [ST documentation] on bit-banding.
+    ///
+    /// [ARM documentation]: http://infocenter.arm.com/help/index.jsp?topic=/com.arm.doc.ddi0337h/Behcjiic.html
+    /// [ST documentation]: https://www.st.com/content/ccc/resource/technical/document/programming_manual/5b/ca/8d/83/56/7f/40/08/CD00228163.pdf/files/CD00228163.pdf/jcr:content/translations/en.CD00228163.pdf
+    #[inline(always)]
+    #[cfg(feature = "bit-banding")]
+    pub fn set_bit(&self, bit_to_set: u8, value: T)
+        where T: core::convert::Into<u32>
+    {
+        let value = value.into();
+        if value > 1 {
+            panic!("value {:?} out of range", value)
+        }
+        unsafe {
+            ptr::write_volatile(Self::bitband_pointer(self.value.get(), bit_to_set), value)
+        }
+    }
 }
 
 // NOTE implicit because of `UnsafeCell`
