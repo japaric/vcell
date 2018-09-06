@@ -72,6 +72,49 @@ impl<T> VolatileCell<T> {
             ptr::write_volatile(bfi_ptr, value)
         }
     }
+
+    /// Sets a collection of bits of the contained value with the bit-manipulation-engine, if
+    /// enabled.
+    /// See [NXP documentation] on the BME. This is an "OR" operation.
+    ///
+    /// [NXP documentation]: https://www.nxp.com/docs/en/application-note/AN4838.pdf
+    #[inline(always)]
+    #[cfg(feature = "bit-manipulation")]
+    pub fn set_bits(&self, bits_to_set: T)
+        where T: Copy
+    {
+        unsafe {
+            let addr = self.value.get() as usize as u32;
+            if addr & 0xe00fffff != addr {
+                panic!("Tried to use BME on address 0x{:x?}, which is not in either the peripheral or upper-SRAM address range");
+            }
+            let bfi_addr = addr | 0x08000000;
+            let bfi_ptr = bfi_addr as usize as *mut T;
+            ptr::write_volatile(bfi_ptr, bits_to_set)
+        }
+    }
+
+    /// Clears a collection of bits of the contained value with the bit-manipulation-engine, if
+    /// enabled.
+    /// See [NXP documentation] on the BME. This is an "AND" operation.
+    /// Note that the bits set in bits_to_clear get *cleared* in the register.
+    ///
+    /// [NXP documentation]: https://www.nxp.com/docs/en/application-note/AN4838.pdf
+    #[inline(always)]
+    #[cfg(feature = "bit-manipulation")]
+    pub fn clear_bits(&self, bits_to_clear: T)
+        where T: Copy + core::ops::Not<Output = T>
+    {
+        unsafe {
+            let addr = self.value.get() as usize as u32;
+            if addr & 0xe00fffff != addr {
+                panic!("Tried to use BME on address 0x{:x?}, which is not in either the peripheral or upper-SRAM address range");
+            }
+            let bfi_addr = addr | 0x04000000;
+            let bfi_ptr = bfi_addr as usize as *mut T;
+            ptr::write_volatile(bfi_ptr, !bits_to_clear)
+        }
+    }
 }
 
 // NOTE implicit because of `UnsafeCell`
