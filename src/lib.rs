@@ -11,6 +11,43 @@
 use core::cell::UnsafeCell;
 use core::ptr;
 
+#[cfg(feature = "bit-manipulation")]
+#[derive(Debug)]
+enum BmeOperation {
+    And,
+    Or,
+    Xor,
+    SetField{first_bit: u8, bit_count: u8},
+}
+#[cfg(feature = "bit-manipulation")]
+impl BmeOperation {
+    #[inline(always)]
+    fn bits(&self) -> usize {
+        match self {
+            BmeOperation::And => 0x04000000,
+            BmeOperation::Or => 0x08000000,
+            BmeOperation::Xor => 0x0c000000,
+            BmeOperation::SetField{first_bit, bit_count} => {
+                0x10000000 |
+                    (usize::from(first_bit & 0x1f) << 23) |
+                    (usize::from((bit_count-1) & 0xf) << 19)
+            },
+        }
+    }
+    #[inline(always)]
+    pub fn wrap_pointer<T>(&self, ptr: *mut T) -> *mut T {
+        let addr = ptr as usize;
+        let mask = match self {
+            BmeOperation::SetField{first_bit: _, bit_count: _} => 0x6007ffff,
+            _ => 0x600fffff,
+        };
+        if addr & mask != addr {
+            panic!("Tried to use BME on address 0x{:x?}, which operation {:?} does not support", addr, self);
+        }
+        (addr | self.bits()) as *mut T
+    }
+}
+
 /// Just like [`Cell`] but with [volatile] read / write operations
 ///
 /// [`Cell`]: https://doc.rust-lang.org/std/cell/struct.Cell.html
@@ -61,14 +98,8 @@ impl<T> VolatileCell<T> {
         where T: Copy
     {
         unsafe {
-            let addr = self.value.get() as usize as u32;
-            if addr & 0x6007ffff != addr {
-                panic!("Tried to use BME on address 0x{:x?}, which is not in either the peripheral or upper-SRAM address range");
-            }
-            let bfi_addr = addr | 0x10000000 |
-                (((first_bit & 0x1f) as u32) << 23) |
-                ((((bit_count-1) & 0xf) as u32) << 19);
-            let bfi_ptr = bfi_addr as usize as *mut T;
+            let op = BmeOperation::SetField{first_bit: first_bit, bit_count: bit_count};
+            let bfi_ptr = op.wrap_pointer(self.value.get());
             ptr::write_volatile(bfi_ptr, value)
         }
     }
@@ -84,13 +115,8 @@ impl<T> VolatileCell<T> {
         where T: Copy
     {
         unsafe {
-            let addr = self.value.get() as usize as u32;
-            if addr & 0x600fffff != addr {
-                panic!("Tried to use BME on address 0x{:x?}, which is not in either the peripheral or upper-SRAM address range");
-            }
-            let bfi_addr = addr | 0x08000000;
-            let bfi_ptr = bfi_addr as usize as *mut T;
-            ptr::write_volatile(bfi_ptr, bits_to_set)
+            let or_ptr = BmeOperation::Or.wrap_pointer(self.value.get());
+            ptr::write_volatile(or_ptr, bits_to_set)
         }
     }
 
@@ -106,13 +132,8 @@ impl<T> VolatileCell<T> {
         where T: Copy + core::ops::Not<Output = T>
     {
         unsafe {
-            let addr = self.value.get() as usize as u32;
-            if addr & 0x600fffff != addr {
-                panic!("Tried to use BME on address 0x{:x?}, which is not in either the peripheral or upper-SRAM address range");
-            }
-            let bfi_addr = addr | 0x04000000;
-            let bfi_ptr = bfi_addr as usize as *mut T;
-            ptr::write_volatile(bfi_ptr, !bits_to_clear)
+            let and_ptr = BmeOperation::And.wrap_pointer(self.value.get());
+            ptr::write_volatile(and_ptr, !bits_to_clear)
         }
     }
 
@@ -127,13 +148,8 @@ impl<T> VolatileCell<T> {
         where T: Copy
     {
         unsafe {
-            let addr = self.value.get() as usize as u32;
-            if addr & 0x600fffff != addr {
-                panic!("Tried to use BME on address 0x{:x?}, which is not in either the peripheral or upper-SRAM address range");
-            }
-            let bfi_addr = addr | 0x0c000000;
-            let bfi_ptr = bfi_addr as usize as *mut T;
-            ptr::write_volatile(bfi_ptr, bits_to_invert)
+            let xor_ptr = BmeOperation::Xor.wrap_pointer(self.value.get());
+            ptr::write_volatile(xor_ptr, bits_to_invert)
         }
     }
 
