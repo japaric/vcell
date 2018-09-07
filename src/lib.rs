@@ -62,7 +62,7 @@ impl<T> VolatileCell<T> {
     {
         unsafe {
             let addr = self.value.get() as usize as u32;
-            if addr & 0xe007ffff != addr {
+            if addr & 0x6007ffff != addr {
                 panic!("Tried to use BME on address 0x{:x?}, which is not in either the peripheral or upper-SRAM address range");
             }
             let bfi_addr = addr | 0x10000000 |
@@ -85,7 +85,7 @@ impl<T> VolatileCell<T> {
     {
         unsafe {
             let addr = self.value.get() as usize as u32;
-            if addr & 0xe00fffff != addr {
+            if addr & 0x600fffff != addr {
                 panic!("Tried to use BME on address 0x{:x?}, which is not in either the peripheral or upper-SRAM address range");
             }
             let bfi_addr = addr | 0x08000000;
@@ -107,7 +107,7 @@ impl<T> VolatileCell<T> {
     {
         unsafe {
             let addr = self.value.get() as usize as u32;
-            if addr & 0xe00fffff != addr {
+            if addr & 0x600fffff != addr {
                 panic!("Tried to use BME on address 0x{:x?}, which is not in either the peripheral or upper-SRAM address range");
             }
             let bfi_addr = addr | 0x04000000;
@@ -128,7 +128,7 @@ impl<T> VolatileCell<T> {
     {
         unsafe {
             let addr = self.value.get() as usize as u32;
-            if addr & 0xe00fffff != addr {
+            if addr & 0x600fffff != addr {
                 panic!("Tried to use BME on address 0x{:x?}, which is not in either the peripheral or upper-SRAM address range");
             }
             let bfi_addr = addr | 0x0c000000;
