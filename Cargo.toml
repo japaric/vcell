@@ -10,3 +10,5 @@ version = "0.1.0"
 
 [features]
 const-fn = []
+bit-manipulation = []
+bit-banding = []
