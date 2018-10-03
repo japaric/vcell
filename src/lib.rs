@@ -28,6 +28,12 @@ impl BmeOperation {
             BmeOperation::Or => 0x08000000,
             BmeOperation::Xor => 0x0c000000,
             BmeOperation::SetField{first_bit, bit_count} => {
+                if *bit_count == 0 || *bit_count > 16 {
+                    panic!("bit_count {} out of range; must be between 1 and 16 inclusive", *bit_count);
+                }
+                if *first_bit > 31 {
+                    panic!("first_bit {} out of range; must be <32", *first_bit);
+                }
                 0x10000000 |
                     (usize::from(first_bit & 0x1f) << 23) |
                     (usize::from((bit_count-1) & 0xf) << 19)
@@ -168,7 +174,12 @@ impl<T> VolatileCell<T> {
             panic!("Tried to change bit {} of value whose size is {}", bit_to_modify, core::mem::size_of::<T>());
         }
         // Shift left 5 bits, since each "normal" bit expands to a 32-bit word in the alias region
-        let bb_offset = (addr & 0xfffff) << 5 | u32::from(bit_to_modify & 0x1f);
+        // Shift the bit_to_modify left 2 bits, since the output addresses must be 32-bit-aligned
+        // We can't overwrite bits because incoming addresses are aligned to T, and bit_to_modify
+        // is already range-checked against the size of T.  (That is, if the bit number is, say,
+        // 27, such that the top 2 bits might collide with lower bits in addr, then those 2 bits
+        // in addr must already be clear because of its alignment.)
+        let bb_offset = (addr & 0xfffff) << 5 | (u32::from(bit_to_modify & 0x1f)) << 2;
         (((addr & 0xf0000000) | 0x02000000) | bb_offset) as usize as *mut u32
     }
 
