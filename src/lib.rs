@@ -54,6 +54,41 @@ impl BmeOperation {
     }
 }
 
+#[cfg(all(test, feature = "bit-manipulation"))]
+mod test_bme {
+    use super::*;
+
+    #[test]
+    fn test_set_field_bits() {
+        for first_bit in 0..32 {
+            for bit_count in 1..=16 {
+                let op = BmeOperation::SetField{first_bit: first_bit, bit_count: bit_count};
+                let val = op.bits() & 0xf007ffff;
+                assert_eq!(val, 0x10000000, "0x{:X} != 0x10000000 with first_bit={} bit_count={}", val, first_bit, bit_count);
+            }
+        }
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_set_field_zero_bits() {
+        let op = BmeOperation::SetField{first_bit: 0, bit_count: 0};
+        op.bits();
+    }
+    #[test]
+    #[should_panic]
+    fn test_set_field_too_many_bits() {
+        let op = BmeOperation::SetField{first_bit: 0, bit_count: 42};
+        op.bits();
+    }
+    #[test]
+    #[should_panic]
+    fn test_set_field_wrong_first_bit() {
+        let op = BmeOperation::SetField{first_bit: 32, bit_count: 0};
+        op.bits();
+    }
+}
+
 /// Just like [`Cell`] but with [volatile] read / write operations
 ///
 /// [`Cell`]: https://doc.rust-lang.org/std/cell/struct.Cell.html
@@ -205,3 +240,53 @@ impl<T> VolatileCell<T> {
 
 // NOTE implicit because of `UnsafeCell`
 // unsafe impl<T> !Sync for VolatileCell<T> {}
+
+#[cfg(all(test, feature = "bit-banding"))]
+mod test_bb {
+    use super::*;
+
+    #[test]
+    fn exhaustively_test_alignment() {
+        for addr in 0x20000000..0x20100000 {
+            for bit in 0..32 {
+                let out = VolatileCell::bitband_pointer(addr as usize as *mut u32, bit) as usize;
+                // All possible bitband outputs must be word-aligned
+                assert!((out & 0x3) == 0);
+            }
+        }
+        for addr in 0x40000000..0x40100000 {
+            for bit in 0..32 {
+                let out = VolatileCell::bitband_pointer(addr as usize as *mut u32, bit) as usize;
+                // All possible bitband outputs must be word-aligned
+                assert!((out & 0x3) == 0);
+            }
+        }
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_invalid_address_below() {
+        VolatileCell::bitband_pointer(0x1fffffffusize as *mut u32, 1);
+    }
+    #[test]
+    #[should_panic]
+    fn test_invalid_address_lower_mid() {
+        VolatileCell::bitband_pointer(0x20100000usize as *mut u32, 1);
+    }
+    #[test]
+    #[should_panic]
+    fn test_invalid_address_upper_mid() {
+        VolatileCell::bitband_pointer(0x3fffffffusize as *mut u32, 1);
+    }
+    #[test]
+    #[should_panic]
+    fn test_invalid_address_above() {
+        VolatileCell::bitband_pointer(0x40100000usize as *mut u32, 1);
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_invalid_bit() {
+        VolatileCell::bitband_pointer(0x20080000usize as *mut u8, 12);
+    }
+}
