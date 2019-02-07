@@ -5,7 +5,6 @@
 
 #![deny(missing_docs)]
 #![deny(warnings)]
-#![cfg_attr(feature = "const-fn", feature(const_fn))]
 #![no_std]
 
 use core::cell::UnsafeCell;
