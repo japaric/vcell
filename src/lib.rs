@@ -14,6 +14,7 @@ use core::ptr;
 ///
 /// [`Cell`]: https://doc.rust-lang.org/std/cell/struct.Cell.html
 /// [volatile]: https://doc.rust-lang.org/std/ptr/fn.read_volatile.html
+#[repr(transparent)]
 pub struct VolatileCell<T> {
     value: UnsafeCell<T>,
 }
