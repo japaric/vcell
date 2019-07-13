@@ -63,7 +63,13 @@ impl<T> VolatileCell<T> {
 /// Reset value of the register
 pub trait ResetValue {
     /// Reset value of the register
-    const RESET_VALUE: Self;
+    fn reset_value() -> Self;
+}
+
+impl<W> ResetValue for W where Self: Default {
+    fn reset_value() -> Self {
+        Self::default()
+    }
 }
 
 /// Reads the contents of the register
@@ -79,9 +85,9 @@ where
 }
 
 /// Writes to the register using `RESET_VALUE` as basis
-pub trait WriteRegisterWithReset<W, T>: core::ops::Deref<Target = VolatileCell<T>>
+pub trait WriteRegister<W, T>: core::ops::Deref<Target = VolatileCell<T>>
 where
-    W: ResetValue + core::ops::Deref<Target = T>,
+    W: Default + core::ops::Deref<Target = T>,
     T: Copy,
 {
     /// Writes to the register
@@ -90,7 +96,25 @@ where
     where
         F: FnOnce(&mut W) -> &mut W,
     {
-        let mut w = W::RESET_VALUE;
+        let mut w = W::default();
+        f(&mut w);
+        (*self).set(*w);
+    }
+}
+
+/// Writes to the register using `RESET_VALUE` as basis
+pub trait WriteRegisterWithReset<W, T>: core::ops::Deref<Target = VolatileCell<T>>
+where
+    W: Default + core::ops::Deref<Target = T>,
+    T: Copy,
+{
+    /// Writes to the register
+    #[inline]
+    fn write_with_reset<F>(&self, f: F)
+    where
+        F: FnOnce(&mut W) -> &mut W,
+    {
+        let mut w = W::default();
         f(&mut w);
         (*self).set(*w);
     }
@@ -104,7 +128,7 @@ where
 {
     /// Writes to the register
     #[inline]
-    fn write<F>(&self, f: F)
+    fn write_with_zero<F>(&self, f: F)
     where
         F: FnOnce(&mut W) -> &mut W,
     {
@@ -117,13 +141,13 @@ where
 /// Writes the reset value to the register
 pub trait ResetRegister<W, T>: WriteRegisterWithReset<W, T>
 where
-    W: ResetValue + core::ops::Deref<Target = T>,
+    W: Default + core::ops::Deref<Target = T>,
     T: Copy,
 {
     /// Writes the reset value to the register
     #[inline]
     fn reset(&self) {
-        self.write(|w| w)
+        self.write_with_reset(|w| w)
     }
 }
 
@@ -135,8 +159,8 @@ where
 {
     /// Writes Zero to the register
     #[inline]
-    fn reset(&self) {
-        self.write(|w| w)
+    fn reset_with_zero(&self) {
+        self.write_with_zero(|w| w)
     }
 }
 
