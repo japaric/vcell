@@ -7,6 +7,3 @@ license = "MIT OR Apache-2.0"
 name = "vcell"
 repository = "https://github.com/japaric/vcell"
 version = "0.1.0"
-
-[features]
-const-fn = []
