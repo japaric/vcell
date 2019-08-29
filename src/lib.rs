@@ -20,17 +20,7 @@ pub struct VolatileCell<T> {
 
 impl<T> VolatileCell<T> {
     /// Creates a new `VolatileCell` containing the given value
-    #[cfg(feature = "const-fn")]
     pub const fn new(value: T) -> Self {
-        VolatileCell { value: UnsafeCell::new(value) }
-    }
-
-    /// Creates a new `VolatileCell` containing the given value
-    ///
-    /// NOTE A `const fn` variant is available under the "const-fn" Cargo
-    /// feature
-    #[cfg(not(feature = "const-fn"))]
-    pub fn new(value: T) -> Self {
         VolatileCell { value: UnsafeCell::new(value) }
     }
 
