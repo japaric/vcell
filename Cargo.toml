@@ -6,4 +6,4 @@ keywords = ["no-std", "volatile", "cell"]
 license = "MIT OR Apache-2.0"
 name = "vcell"
 repository = "https://github.com/japaric/vcell"
-version = "0.1.0"
+version = "0.1.1"

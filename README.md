@@ -8,6 +8,8 @@
 [`Cell`]: https://doc.rust-lang.org/std/cell/struct.Cell.html
 [volatile]: https://doc.rust-lang.org/std/ptr/fn.read_volatile.html
 
+# [Change log](CHANGELOG.md)
+
 # License
 
 Licensed under either of
