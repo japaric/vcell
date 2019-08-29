@@ -6,4 +6,7 @@ keywords = ["no-std", "volatile", "cell"]
 license = "MIT OR Apache-2.0"
 name = "vcell"
 repository = "https://github.com/japaric/vcell"
-version = "0.1.1"
+version = "0.1.2"
+
+[features]
+const-fn = [] # Unused, but kept for backwards compatibility
