@@ -48,5 +48,7 @@ impl<T> VolatileCell<T> {
     }
 }
 
+unsafe impl<T> Send for VolatileCell<T> where T: Send {}
+
 // NOTE implicit because of `UnsafeCell`
 // unsafe impl<T> !Sync for VolatileCell<T> {}
