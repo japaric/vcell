@@ -8,6 +8,7 @@
 #![no_std]
 
 use core::cell::UnsafeCell;
+use core::fmt;
 use core::ptr;
 
 /// Just like [`Cell`] but with [volatile] read / write operations
@@ -50,3 +51,11 @@ impl<T> VolatileCell<T> {
 
 // NOTE implicit because of `UnsafeCell`
 // unsafe impl<T> !Sync for VolatileCell<T> {}
+
+impl<T: Copy + fmt::Debug> fmt::Debug for VolatileCell<T> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("VolatileCell")
+            .field("value", &self.get())
+            .finish()
+    }
+}
