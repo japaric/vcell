@@ -17,7 +17,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 - Added back the `const-fn` feature, but unused for backward compatibility
 
-## [v0.1.1] - 2019-08-29
+## [v0.1.1] - 2019-08-29 (yanked, use v0.1.2 or newer)
 
 ### Added
 
